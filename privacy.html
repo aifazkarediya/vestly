@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Privacy and AI — Vestly</title>
+  <link rel="stylesheet" href="./assets/privacy.css">
+  <link rel="icon" href="./favicon.svg">
+</head>
+<body>
+  <main>
+    <a href="./">Back to your sheet</a>
+    <h1>Privacy and AI</h1>
+    <p>Vestly calculates and saves your investment schedule in your browser. There is no app database, account system, analytics, or shared sheet storage.</p>
+    <h2>Your saved sheet</h2>
+    <p>Rows and month settings are stored in localStorage on this browser for this website address. Other visitors have separate storage. Clearing browser data can remove your saved sheet. Private browsing may clear it when the session ends. Export a CSV if you need a separate copy. CSV import is not currently available.</p>
+    <p>Your local sample and data do not automatically transfer to a different device, browser, or website address. A newly published website starts with its own separate browser storage.</p>
+    <h2>Optional Google Gemini connection</h2>
+    <p>AI editing requires your own Gemini API key. The key stays in this tab's memory and clears on refresh or Disconnect. It is not stored with your sheet or included in exports.</p>
+    <p>Connecting sends your key to Google to check model access, without sending sheet data. Pressing Run sends your instruction and the complete sheet inputs directly to Google. They do not pass through an app-owner server. Google processes that data under the terms and settings for your account. Quotas and usage charges may apply.</p>
+    <p>Anyone or any browser extension with access to your browser session may be able to access information in the page. Only use keys and sheets that you are comfortable using on this device.</p>
+    <p>Read <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Google's Gemini API terms</a> and <a href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noopener noreferrer">API key guidance</a>. Restrict your key to the Gemini API and set appropriate usage limits in your Google account.</p>
+    <h2>Hosting and assets</h2>
+    <p>Fonts, icons, styles and application code are served from this website. AI requests are the app's only direct connection to an external service. The website hosting provider receives ordinary page requests, including network information such as your IP address, and may keep access logs under its own policies.</p>
+    <h2>Calculations and AI changes</h2>
+    <p>This is a planning tool, not a promise of returns. Rates are monthly. Deposits earn returns in the same month, and withdrawals happen after the return is calculated. Actual returns and investment costs can differ.</p>
+    <p>AI can misunderstand instructions. Review changes and use Undo if needed. Net ROI is a simple net-profit divided by contributed capital calculation, not an annualized or time-weighted return.</p>
+  </main>
+</body>
+</html>

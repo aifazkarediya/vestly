@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vestly — USD Investment Schedule Spreadsheet</title>
+    <meta name="description" content="Plan monthly USD investments, deposits, returns and withdrawals. Save your sheet in your browser, with optional Gemini AI editing.">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src https://generativelanguage.googleapis.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./assets/app.css">
+    <link rel="stylesheet" href="./assets/icons/regular/style.css">
+    <link rel="stylesheet" href="./assets/icons/bold/style.css">
+    <link rel="stylesheet" href="./assets/icons/fill/style.css">
+    <script src="./csv.js" defer></script>
+    <script src="./gemini.js" defer></script>
+    <script src="./app.js" defer></script>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+    <!-- Toast Notification with Undo Support -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium">
+        <i class="ph-fill ph-check-circle text-blue-400 text-lg"></i>
+        <span id="toastMessage" role="status" aria-live="polite">Updated</span>
+        <button id="toastUndoBtn" data-action="undoLastAction" aria-label="Undo last change" class="hidden ml-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-semibold transition pointer-events-auto">
+            Undo
+        </button>
+    </div>
+
+    <!-- Top Application Bar -->
+    <header class="bg-white border-b border-slate-200 px-4 lg:px-6 min-h-14 py-2 sm:h-14 sm:py-0 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
+                <i class="ph-bold ph-table text-xl"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-display font-bold text-base text-slate-900 tracking-tight">Vestly</h1>
+                </div>
+                <p class="text-[11px] text-slate-500 hidden sm:block">Compounding Investment Schedule & Profit Ledger (USD $)</p>
+            </div>
+        </div>
+
+        <!-- Minimal Essential Right Quick Actions -->
+        <div class="flex items-center gap-2 no-print">
+            <button data-action="addRows" data-number="1" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="Add 1 Month Row">
+                <i class="ph-bold ph-plus text-blue-600"></i>
+                <span>+1 Row</span>
+            </button>
+            <button id="topUndoBtn" disabled data-action="undoLastAction" aria-label="Undo last change" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-500 transition opacity-50 pointer-events-none" title="Undo Last Change">
+                <i class="ph-bold ph-arrow-u-up-left"></i>
+                <span class="hidden sm:inline">Undo</span>
+            </button>
+            <button data-action="openClearModal" aria-label="Clear sheet" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition" title="Clear Sheet">
+                <i class="ph-bold ph-trash"></i>
+                <span class="hidden sm:inline">Clear</span>
+            </button>
+            <button data-action="exportCSV" aria-label="Export CSV" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition">
+                <i class="ph-bold ph-download-simple"></i>
+                <span class="hidden sm:inline">Export CSV</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Compact KPI Summary Strip -->
+    <section class="bg-slate-50/80 border-b border-slate-200 px-4 lg:px-6 py-3 shrink-0">
+        <div class="max-w-[1600px] mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            <!-- Initial Starting Bal -->
+            <div class="bg-white rounded-xl px-3.5 py-2.5 border border-slate-200/90 shadow-2xs">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Initial Capital (Row 1)</div>
+                <div id="kpiInitial" class="font-mono font-bold text-base sm:text-lg text-slate-900 tabular-nums mt-0.5">$10,000.00</div>
+            </div>
+            <!-- Total Added Bal (Neutral Black as requested) -->
+            <div class="bg-white rounded-xl px-3.5 py-2.5 border border-slate-200/90 shadow-2xs">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Added Bal</div>
+                <div id="kpiTotalAdded" class="font-mono font-bold text-base sm:text-lg text-slate-900 tabular-nums mt-0.5">+$0.00</div>
+            </div>
+            <!-- Total Gross Profit -->
+            <div class="bg-white rounded-xl px-3.5 py-2.5 border border-slate-200/90 shadow-2xs">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Gross Profit</div>
+                <div id="kpiTotalGross" class="font-mono font-bold text-base sm:text-lg text-blue-600 tabular-nums mt-0.5">+$0.00</div>
+            </div>
+            <!-- Total Withdrawals -->
+            <div class="bg-white rounded-xl px-3.5 py-2.5 border border-slate-200/90 shadow-2xs">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Withdrawals</div>
+                <div id="kpiTotalWithdrawals" class="font-mono font-bold text-base sm:text-lg text-rose-600 tabular-nums mt-0.5">-$0.00</div>
+            </div>
+            <!-- Total Net Profit -->
+            <div class="bg-white rounded-xl px-3.5 py-2.5 border border-slate-200/90 shadow-2xs">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Net Profit</div>
+                <div id="kpiTotalNet" class="font-mono font-bold text-base sm:text-lg text-blue-700 tabular-nums mt-0.5">+$0.00</div>
+            </div>
+            <!-- Final Ending Balance -->
+            <div class="bg-blue-950 text-white rounded-xl px-3.5 py-2.5 border border-blue-800 shadow-2xs">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-blue-300">Final Ending Bal</span>
+                    <span id="kpiTotalROI" class="text-[10px] font-mono font-semibold bg-blue-800/80 text-blue-200 px-1.5 py-0.2 rounded">+0.0%</span>
+                </div>
+                <div id="kpiFinalBalance" class="font-mono font-bold text-base sm:text-lg text-white tabular-nums mt-0.5">$0.00</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sleek AI Command Bar + Formula Bar -->
+    <section class="bg-white border-b border-slate-200 px-4 lg:px-6 py-2.5 space-y-2 shrink-0 no-print">
+        <div class="max-w-[1600px] mx-auto space-y-2">
+            <div class="flex items-center justify-between gap-3">
+                <span id="aiConnectionStatus" class="text-xs text-slate-500">Connect Gemini to edit your sheet with AI</span>
+                <button type="button" id="connectAIButton" data-action="openAIConnection" class="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold">Connect AI</button>
+            </div>
+            <!-- AI Input Bar -->
+            <form id="aiCommandForm"  class="relative flex items-center gap-2 bg-gradient-to-r from-blue-50/70 via-white to-indigo-50/50 border border-blue-300/90 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/20 rounded-xl px-3 py-1.5 shadow-2xs transition-all">
+                <div class="flex items-center gap-1.5 text-blue-700 font-display font-bold text-xs shrink-0 select-none">
+                    <span class="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-2xs">
+                        <i id="aiSparkleIcon" class="ph-fill ph-sparkle text-sm"></i>
+                    </span>
+                    <span class="hidden sm:inline">Ask AI</span>
+                </div>
+
+                <div class="h-4 w-px bg-blue-200 shrink-0"></div>
+
+                <input id="aiPromptInput" aria-label="Sheet command" type="text" autocomplete="off"
+                    placeholder="Try: Add $1,000 monthly deposit, or Set monthly return to 6% for all rows"
+                    class="w-full bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none font-sans">
+
+                <div id="aiStatusBadge" class="hidden items-center gap-1.5 text-[11px] font-mono font-medium text-blue-700 bg-blue-100/80 px-2.5 py-1 rounded-lg shrink-0">
+                    <i class="ph-bold ph-spinner animate-spin"></i>
+                    <span>Applying...</span>
+                </div>
+
+                <button id="aiSubmitBtn" type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition shrink-0 cursor-pointer">
+                    <span>Run</span>
+                    <i class="ph-bold ph-paper-plane-right"></i>
+                </button>
+            </form>
+            <p id="aiFeedback" role="status" aria-live="polite" class="text-xs text-slate-500">Describe your changes, then press Run. AI uses Google Gemini; Undo restores the previous sheet.</p>
+
+            <!-- Quick Suggestion Chips & Formula Bar Row -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
+                <!-- Interactive AI Prompt Chips -->
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 no-scrollbar">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 shrink-0 mr-0.5">Try:</span>
+                    <button type="button" data-action="runQuickPrompt" data-prompt="Clear all withdrawals" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 border border-slate-200/80 transition shrink-0 cursor-pointer">
+                        <i class="ph-fill ph-sparkle text-blue-600 text-[10px]"></i> Clear all withdrawals
+                    </button>
+                    <button type="button" data-action="runQuickPrompt" data-prompt="Set monthly return to 6% for all rows" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 border border-slate-200/80 transition shrink-0 cursor-pointer">
+                        <i class="ph-fill ph-sparkle text-blue-600 text-[10px]"></i> Set all returns to 6%
+                    </button>
+                    <button type="button" data-action="runQuickPrompt" data-prompt="Add $1,000 monthly deposit" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 hover:bg-blue-50 text-slate-600 border border-slate-200 shrink-0">$1,000 monthly deposit</button>
+                    <button type="button" data-action="runQuickPrompt" data-prompt="Withdraw $500 every 3rd month and $0 otherwise" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 hover:bg-blue-50 text-slate-600 border border-slate-200 shrink-0">$500 quarterly withdrawal</button>
+                    <button type="button" data-action="runQuickPrompt" data-prompt="Start with $25,000, add $1,000/mo at 5% return for 24 months starting Jan 2027" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 hover:bg-blue-50 text-slate-600 border border-slate-200 shrink-0">$25k start · 24 months</button>
+                    <button type="button" data-action="runQuickPrompt" data-prompt="Zero out all balances and rates" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 border border-slate-200/80 transition shrink-0 cursor-pointer">
+                        <i class="ph-fill ph-sparkle text-rose-500 text-[10px]"></i> Zero all balances
+                    </button>
+                </div>
+
+                <!-- Compact Excel Formula Bar -->
+                <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 lg:w-[460px] shrink-0">
+                    <div id="cellRefBox" class="w-11 text-center font-mono text-[11px] font-bold text-slate-800 bg-white border border-slate-200 rounded py-0.5 select-all shrink-0">
+                        B1
+                    </div>
+                    <div class="text-slate-400 font-serif italic font-bold text-xs px-0.5 shrink-0">fx</div>
+                    <div class="h-3.5 w-px bg-slate-200 shrink-0"></div>
+                    <input id="formulaBarInput" type="text" placeholder="Select cell..."
+                        class="w-full bg-transparent font-mono text-xs text-slate-800 focus:outline-none">
+                    <span id="cellStatusTag" class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold shrink-0">
+                        Input
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Spreadsheet Grid Container -->
+    <main class="flex-1 px-4 lg:px-6 py-4 overflow-hidden flex flex-col">
+        <div class="max-w-[1600px] w-full mx-auto flex-1 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+            
+            <div class="overflow-auto flex-1 sheet-container max-h-[65vh]">
+                <table class="w-full sheet-table text-xs sm:text-sm tabular-nums">
+                    <!-- Sticky Excel Column Letters & Titles Header -->
+                    <thead class="sticky top-0 z-20 bg-slate-100 text-slate-600 select-none">
+                        <!-- Excel Letter Row (A - H) -->
+                        <tr class="text-[11px] font-mono font-semibold text-slate-500 bg-slate-100/95">
+                            <th class="w-12 py-1 text-center bg-slate-200/70">#</th>
+                            <th id="colHeader-A" class="py-1 text-center w-32">A</th>
+                            <th id="colHeader-B" class="py-1 text-center w-40">B</th>
+                            <th id="colHeader-C" class="py-1 text-center w-36">C</th>
+                            <th id="colHeader-D" class="py-1 text-center w-36">D</th>
+                            <th id="colHeader-E" class="py-1 text-center w-40">E</th>
+                            <th id="colHeader-F" class="py-1 text-center w-36">F</th>
+                            <th id="colHeader-G" class="py-1 text-center w-40">G</th>
+                            <th id="colHeader-H" class="py-1 text-center w-44">H</th>
+                        </tr>
+                        <!-- Descriptive Column Headers -->
+                        <tr class="bg-slate-50 text-slate-800 border-b border-slate-300 font-display text-xs">
+                            <th class="py-2.5 px-2 text-center font-bold text-slate-400 bg-slate-100">Row</th>
+                            <th class="py-2 px-3 text-left font-bold bg-blue-50/30">
+                                <div class="flex items-center justify-between gap-1">
+                                    <div class="flex flex-col">
+                                        <span class="text-slate-900">Month</span>
+                                        <span id="colAMetaLabel" class="text-[10px] font-mono font-normal text-blue-700">MMM YYYY • +1M</span>
+                                    </div>
+                                    <button data-action="fillMonthSeriesFromRow" data-number="0" class="p-1 rounded hover:bg-blue-100 text-blue-700 transition no-print" title="Auto-Sequence All Months from Row 1">
+                                        <i class="ph-bold ph-arrow-line-down text-xs"></i>
+                                    </button>
+                                </div>
+                            </th>
+                            <th class="py-2.5 px-3 text-right font-bold">
+                                <div class="flex flex-col items-end">
+                                    <span>Starting Bal ($)</span>
+                                    <span class="text-[10px] font-mono font-normal text-slate-400">Row 1 / Auto-Roll</span>
+                                </div>
+                            </th>
+                            <th class="py-2.5 px-3 text-right font-bold bg-indigo-50/40">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-indigo-950">Adding Bal ($)</span>
+                                    <span class="text-[10px] font-mono font-normal text-indigo-600">Deposit (+)</span>
+                                </div>
+                            </th>
+                            <th class="py-2.5 px-3 text-right font-bold bg-blue-50/40">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-blue-900">Percentage Return</span>
+                                    <span class="text-[10px] font-mono font-normal text-blue-600">Monthly %</span>
+                                </div>
+                            </th>
+                            <th class="py-2.5 px-3 text-right font-bold bg-slate-100/70">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-slate-800">Gross Profit ($)</span>
+                                    <span class="text-[10px] font-mono font-normal text-slate-500">=(B+C)*(D/100)</span>
+                                </div>
+                            </th>
+                            <th class="py-2.5 px-3 text-right font-bold bg-rose-50/40">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-rose-900">Withdrawals ($)</span>
+                                    <span class="text-[10px] font-mono font-normal text-rose-500">Payout (−)</span>
+                                </div>
+                            </th>
+                            <th class="py-2.5 px-3 text-right font-bold bg-slate-100/70">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-slate-800">Net Profit ($)</span>
+                                    <span class="text-[10px] font-mono font-normal text-slate-500">=E−F</span>
+                                </div>
+                            </th>
+                            <th class="py-2.5 px-3 text-right font-bold bg-blue-50/30">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-blue-950">Ending Bal ($)</span>
+                                    <span class="text-[10px] font-mono font-normal text-blue-600">=B+C+G → Next B</span>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <!-- Spreadsheet Body -->
+                    <tbody id="sheetBody" class="divide-y divide-slate-200 font-mono text-xs sm:text-[13px]">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+
+                    <!-- Sticky Totals / Summary Footer Row -->
+                    <tfoot class="sticky bottom-0 z-20 bg-slate-900 text-white font-mono text-xs sm:text-[13px] shadow-md">
+                        <tr>
+                            <td class="py-3 px-2 text-center font-bold text-slate-400 bg-slate-950">∑</td>
+                            <td class="py-3 px-3 font-sans font-bold text-white">TOTAL / SUMMARY</td>
+                            <td id="footStarting" class="py-3 px-3 text-right text-slate-300 font-semibold">$10,000.00</td>
+                            <td id="footAdding" class="py-3 px-3 text-right text-white font-bold">$0.00</td>
+                            <td id="footAvgReturn" class="py-3 px-3 text-right text-blue-300 font-semibold" title="Average Monthly Return">0.00% avg</td>
+                            <td id="footGross" class="py-3 px-3 text-right text-blue-400 font-bold">+$0.00</td>
+                            <td id="footWithdrawals" class="py-3 px-3 text-right text-rose-300 font-bold">-$0.00</td>
+                            <td id="footNet" class="py-3 px-3 text-right text-blue-300 font-bold">+$0.00</td>
+                            <td id="footEnding" class="py-3 px-3 text-right text-white font-extrabold bg-blue-900/90">$10,000.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Spreadsheet Bottom Status Bar -->
+            <div class="bg-slate-100 border-t border-slate-200 px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 shrink-0 no-print">
+                <div class="flex items-center gap-3">
+                    <div class="inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-t-md border border-b-0 border-slate-300 font-semibold text-blue-700 shadow-2xs">
+                        <i class="ph-fill ph-table"></i>
+                        <span>USD_Investment_Schedule</span>
+                    </div>
+                    <span class="text-slate-400 hidden sm:inline">Tip: Click any white/tinted cell to edit directly. Use <kbd class="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] font-mono">Enter</kbd>, <kbd class="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] font-mono">Tab</kbd>, or <kbd class="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[10px] font-mono">↑↓←→</kbd> keys.</span>
+                </div>
+                <div class="flex items-center gap-4 font-mono">
+                    <span id="privacyStatus">Saved in this browser only</span>
+                    <span id="statusRowCount">Rows: 12</span>
+                    <span id="statusActiveCapital">Active Capital: $10,000.00</span>
+                    <span class="text-blue-700 font-semibold">Currency: USD ($)</span>
+                    <a href="./privacy.html" class="text-blue-700 underline">Privacy &amp; AI</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Clear All Data Confirmation Modal -->
+    <div id="clearModal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+                        <i class="ph-bold ph-warning-circle text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-base text-slate-900">Clear Spreadsheet Data</h3>
+                        <p class="text-[11px] text-slate-500">Choose how you want to reset your USD schedule</p>
+                    </div>
+                </div>
+                <button data-action="closeClearModal" class="text-slate-400 hover:text-slate-600">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-2.5 text-xs">
+                <button data-action="confirmClearAll" data-mode="zero_balances" class="w-full text-left p-3.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/40 transition flex items-start gap-3 group">
+                    <i class="ph-bold ph-eraser text-amber-600 text-lg mt-0.5"></i>
+                    <div>
+                        <div class="font-bold text-slate-900 group-hover:text-amber-900">Zero Out All Balances & Rates (Keep Months)</div>
+                        <p class="text-slate-500 text-[11px] mt-0.5">Resets Starting Bal, Adding Bal, % Return, and Withdrawals to $0.00 / 0% across all rows while keeping your Month labels intact.</p>
+                    </div>
+                </button>
+
+                <button data-action="confirmClearAll" data-mode="blank_sheet" class="w-full text-left p-3.5 rounded-xl border border-slate-200 hover:border-rose-400 hover:bg-rose-50/40 transition flex items-start gap-3 group">
+                    <i class="ph-bold ph-trash text-rose-600 text-lg mt-0.5"></i>
+                    <div>
+                        <div class="font-bold text-slate-900 group-hover:text-rose-900">Wipe to Fresh 1-Row Blank Sheet</div>
+                        <p class="text-slate-500 text-[11px] mt-0.5">Clears all rows and starts fresh with a single $0.00 row at your starting month.</p>
+                    </div>
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-400">
+                <span><i class="ph-fill ph-info text-blue-600"></i> You can undo immediately after clearing</span>
+                <button data-action="closeClearModal" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spreadsheet Engine Script -->
+    <dialog id="aiConnectionDialog" aria-labelledby="aiDialogTitle" class="rounded-2xl p-0 w-[440px] max-w-[calc(100vw-32px)] shadow-xl backdrop:bg-slate-900/40">
+        <form id="aiConnectionForm" class="p-6 space-y-4">
+            <div class="flex items-center justify-between gap-3">
+                <h2 id="aiDialogTitle" class="font-display font-bold text-lg">Connect your AI</h2>
+                <button type="button" data-action="closeAIConnection" aria-label="Close AI connection" class="text-slate-500 px-2 py-1 rounded hover:bg-slate-100">✕</button>
+            </div>
+            <p class="text-sm text-slate-600">Use your own Google Gemini key. Paste it below and you’re ready to go.</p>
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="inline-block text-sm text-blue-700 underline">Get a Gemini API key from Google</a>
+            <div>
+                <label for="geminiKeyInput" class="block text-sm font-semibold mb-1">Gemini API key</label>
+                <input id="geminiKeyInput" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="Paste your key" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-blue-600">
+            </div>
+            <p class="text-xs text-slate-500">Your key stays in this tab’s memory and is cleared on refresh or Disconnect. Connecting checks the key with Google. When you press Run, your instruction and sheet go directly to Google, not the app owner. Google usage limits and charges may apply.</p>
+            <p id="aiConnectFeedback" role="status" aria-live="polite" class="text-sm text-slate-600"></p>
+            <div class="flex items-center justify-end gap-2">
+                <button id="disconnectAIButton" type="button" data-action="disconnectAI" hidden class="px-3 py-2 rounded-lg text-sm text-rose-700 bg-rose-50">Disconnect</button>
+                <button id="saveAIButton" type="submit" class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700">Connect</button>
+            </div>
+        </form>
+    </dialog>
+</body>
+</html>

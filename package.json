@@ -1,0 +1,25 @@
+{
+  "name": "vestly",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser-local USD investment schedule with optional visitor-owned Gemini AI",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test gemini.test.cjs tests/*.test.cjs",
+    "check": "npm run test && npm run build && node scripts/check-release.mjs",
+    "start": "node scripts/serve.mjs",
+    "preview": "node scripts/serve.mjs --port 5174"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource-variable/jetbrains-mono": "5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "5.3.0",
+    "@phosphor-icons/web": "2.1.2",
+    "@tailwindcss/node": "4.3.3",
+    "@tailwindcss/oxide": "4.3.3",
+    "tailwindcss": "4.3.3"
+  }
+}
