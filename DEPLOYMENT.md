@@ -34,6 +34,12 @@ Deployment is manual. New pushes check the code but do not automatically publish
 
 ## Other static hosts
 
+### Vercel
+
+Import `aifazkarediya/vestly` from GitHub and keep the repository root as the root directory. The checked-in `vercel.json` selects Other as the framework, installs with `npm ci`, runs the full `npm run check`, and publishes only `dist`. It also configures security headers because Vercel does not use the `_headers` file. No environment variables or shared Gemini API key are required. Visitors connect their own keys in the published app. Future pushes to the production branch will deploy through the Vercel Git integration.
+
+### General setup
+
 Use `npm ci && npm run check` as the build command and `dist` as the publish directory. Deploy only `dist`, never the whole project folder. Use HTTPS for the public site. `_headers` supplies additional security headers on hosts that support that file, such as Cloudflare Pages and Netlify. GitHub Pages does not apply custom `_headers`; the app's HTML content-security policy still blocks external scripts and limits API connections to Google, but host-level framing restrictions need host support.
 
 ## Before the first public release
